@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Group Study Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark">§</span>
+      <div class="brand-text">
+        <div class="brand-name">Ledger</div>
+        <div class="brand-sub">Group Study Manager</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" data-view="dashboard">
+        <span class="nav-ico">⌂</span> Dashboard
+      </button>
+      <button class="nav-item" data-view="subjects">
+        <span class="nav-ico">▤</span> Subjects
+      </button>
+      <button class="nav-item" data-view="today">
+        <span class="nav-ico">☉</span> Today's Work
+      </button>
+      <button class="nav-item" data-view="tasks">
+        <span class="nav-ico">☰</span> All Tasks
+      </button>
+      <button class="nav-item" data-view="members">
+        <span class="nav-ico">◎</span> Members
+      </button>
+      <button class="nav-item" data-view="reports">
+        <span class="nav-ico">▦</span> Reports
+      </button>
+      <button class="nav-item" data-view="settings">
+        <span class="nav-ico">⚙</span> Settings
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="auth-mini" id="authMini">
+        <img class="auth-mini-photo" id="authMiniPhoto" src="" alt="" onerror="this.style.visibility='hidden'">
+        <div class="auth-mini-info">
+          <div class="auth-mini-name" id="authMiniName"></div>
+          <div class="auth-mini-role" id="authMiniRole"></div>
+        </div>
+        <button class="icon-btn" id="signOutBtn" title="Sign out">⎋</button>
+      </div>
+      <button class="btn-ghost small" id="darkModeToggle">
+        <span id="darkModeIcon">☾</span> <span id="darkModeLabel">Dark mode</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MOBILE TOPBAR -->
+  <div class="topbar">
+    <button class="hamburger" id="hamburgerBtn">☰</button>
+    <span class="topbar-title">Ledger</span>
+    <button class="btn-ghost small" id="darkModeToggleMobile">☾</button>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view active" id="view-dashboard">
+      <header class="view-head">
+        <div>
+          <h1 class="hero-title">Group Study Manager</h1>
+          <p class="hero-sub">Plan · Write · Track · Complete</p>
+        </div>
+        <button class="btn-primary" id="addWorkBtnDash">+ Add Work</button>
+      </header>
+
+      <div class="stat-row" id="statRow"></div>
+
+      <div class="dash-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Writing progress</h2>
+            <span class="panel-note" id="pagesNote"></span>
+          </div>
+          <div class="big-bar-wrap">
+            <div class="big-bar"><div class="big-bar-fill" id="pagesBarFill"></div></div>
+            <div class="big-bar-labels">
+              <span id="pagesCompletedLabel"></span>
+              <span id="pagesPercentLabel"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Remaining work</h2></div>
+          <div class="remaining-list" id="remainingList"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Today's work</h2>
+          <button class="link-btn" data-view-link="today">See all →</button>
+        </div>
+        <div class="today-list" id="dashTodayList"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Deadlines</h2>
+        </div>
+        <div class="deadline-grid" id="deadlineGrid"></div>
+      </div>
+    </section>
+
+    <!-- ============ SUBJECTS ============ -->
+    <section class="view" id="view-subjects">
+      <header class="view-head">
+        <div>
+          <h1 class="page-title">Subjects</h1>
+          <p class="page-sub">Every subject, split into theory and practical.</p>
+        </div>
+        <button class="btn-primary" id="addSubjectBtn">+ Add subject</button>
+      </header>
+      <div class="subject-grid" id="subjectGrid"></div>
+    </section>
+
+    <!-- ============ SUBJECT DETAIL ============ -->
+    <section class="view" id="view-subject-detail">
+      <header class="view-head">
+        <div>
+          <button class="link-btn" data-view-link="subjects">← Back to subjects</button>
+          <h1 class="page-title" id="subjectDetailName">Subject</h1>
+          <p class="page-sub" id="subjectDetailProgress">Overall progress: 0%</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn-secondary" id="editSubjectBtn">Edit</button>
+          <button class="btn-danger-outline" id="deleteSubjectBtn">Delete</button>
+        </div>
+      </header>
+
+      <div class="subject-progress-row">
+        <div class="mini-progress-card">
+          <span class="mini-label">Theory</span>
+          <div class="thin-bar"><div class="thin-bar-fill theory" id="sdTheoryFill"></div></div>
+          <span class="mini-percent" id="sdTheoryPercent">0%</span>
+        </div>
+        <div class="mini-progress-card">
+          <span class="mini-label">Practical</span>
+          <div class="thin-bar"><div class="thin-bar-fill practical" id="sdPracticalFill"></div></div>
+          <span class="mini-percent" id="sdPracticalPercent">0%</span>
+        </div>
+        <div class="mini-progress-card">
+          <span class="mini-label">Overall</span>
+          <div class="thin-bar"><div class="thin-bar-fill overall" id="sdOverallFill"></div></div>
+          <span class="mini-percent" id="sdOverallPercent">0%</span>
+        </div>
+      </div>
+
+      <div class="subject-detail-cols">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Theory</h2>
+            <button class="link-btn" id="addTheoryBtn">+ Add</button>
+          </div>
+          <div class="task-list" id="sdTheoryList"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Practical</h2>
+            <button class="link-btn" id="addPracticalBtn">+ Add</button>
+          </div>
+          <div class="task-list" id="sdPracticalList"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Other work</h2></div>
+        <div class="task-list" id="sdOtherList"></div>
+      </div>
+
+      <div class="remaining-banner" id="sdRemainingBanner"></div>
+    </section>
+
+    <!-- ============ TODAY ============ -->
+    <section class="view" id="view-today">
+      <header class="view-head">
+        <div>
+          <h1 class="page-title">Today's work</h1>
+          <p class="page-sub">What needs writing right now.</p>
+        </div>
+      </header>
+      <div class="today-list wide" id="todayList"></div>
+    </section>
+
+    <!-- ============ ALL TASKS ============ -->
+    <section class="view" id="view-tasks">
+      <header class="view-head">
+        <div>
+          <h1 class="page-title">All tasks</h1>
+          <p class="page-sub">Every piece of work, across every subject.</p>
+        </div>
+        <button class="btn-primary" id="addWorkBtnTasks">+ Add Work</button>
+      </header>
+
+      <div class="toolbar">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search work, subject, member…">
+        <select id="filterSubject" class="select-input"><option value="all">All subjects</option></select>
+        <select id="filterMember" class="select-input"><option value="all">All members</option></select>
+        <select id="filterPriority" class="select-input">
+          <option value="all">All priorities</option>
+          <option value="High">High priority</option>
+          <option value="Medium">Medium priority</option>
+          <option value="Low">Low priority</option>
+        </select>
+      </div>
+      <div class="chip-row" id="typeChips">
+        <button class="chip active" data-filter-type="all">All</button>
+        <button class="chip" data-filter-type="Theory">Theory</button>
+        <button class="chip" data-filter-type="Practical">Practical</button>
+        <button class="chip" data-filter-type="Assignment">Assignment</button>
+        <button class="chip" data-filter-type="Journal">Journal</button>
+        <button class="chip" data-filter-type="Viva">Viva</button>
+        <button class="chip" data-filter-type="Other">Other</button>
+        <span class="chip-sep"></span>
+        <button class="chip" data-filter-status="Pending">Pending</button>
+        <button class="chip" data-filter-status="Completed">Completed</button>
+      </div>
+
+      <div class="task-list wide" id="allTasksList"></div>
+    </section>
+
+    <!-- ============ MEMBERS ============ -->
+    <section class="view" id="view-members">
+      <header class="view-head">
+        <div>
+          <h1 class="page-title">Group members</h1>
+          <p class="page-sub">Who's carrying what.</p>
+        </div>
+      </header>
+      <div class="member-grid" id="memberGrid"></div>
+    </section>
+
+    <!-- ============ REPORTS ============ -->
+    <section class="view" id="view-reports">
+      <header class="view-head">
+        <div>
+          <h1 class="page-title">Reports</h1>
+          <p class="page-sub">A full snapshot of the group's work.</p>
+        </div>
+        <button class="btn-secondary" id="printReportBtn">Print report</button>
+      </header>
+
+      <div class="report-sheet" id="reportSheet">
+        <div class="stat-row" id="reportStatRow"></div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Pages / units</h2></div>
+          <div class="report-units" id="reportUnits"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Subject-wise progress</h2></div>
+          <div id="reportSubjects"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Member-wise progress</h2></div>
+          <div id="reportMembers"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="view" id="view-settings">
+      <header class="view-head">
+        <div>
+          <h1 class="page-title">Settings</h1>
+          <p class="page-sub">Names, backups and resets.</p>
+        </div>
+      </header>
+
+      <div class="panel" id="syncPanel">
+        <div class="panel-head">
+          <h2>Live sync across devices</h2>
+          <span class="sync-status off" id="syncStatusBadge">Not connected</span>
+        </div>
+        <p class="panel-note">Connect all 3 members to the same free Firebase project so everyone's edits show up for everyone, instantly — no refresh needed.</p>
+        <div class="form-row">
+          <label>Firebase config <span class="optional">paste the whole config object from Firebase</span></label>
+          <textarea id="firebaseConfigInput" rows="4" placeholder='{"apiKey": "...", "authDomain": "...", "databaseURL": "...", "projectId": "..."}'></textarea>
+        </div>
+        <div class="form-row">
+          <label>Group code <span class="optional">same code on every member's device</span></label>
+          <input type="text" id="groupCodeInput" placeholder="e.g. team-dbms-2026">
+        </div>
+        <div class="settings-actions">
+          <button type="button" class="btn-primary" id="connectSyncBtn">Connect</button>
+          <button type="button" class="btn-secondary" id="disconnectSyncBtn">Disconnect</button>
+        </div>
+        <p class="panel-note" style="margin-top:10px;">Anyone who has your config and group code can read/write this data — don't share them publicly.</p>
+      </div>
+
+      <div class="panel" id="accessPanel" style="display:none;">
+        <div class="panel-head"><h2>Access requests</h2></div>
+        <p class="panel-note">Whoever signs in with Google first becomes admin. Everyone else needs approval before they can use this group.</p>
+        <div id="accessPendingList"></div>
+        <div class="panel-head" style="margin-top:18px;"><h2>Approved members</h2></div>
+        <div id="accessApprovedList"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Group member names</h2></div>
+        <div class="settings-members" id="settingsMembers"></div>
+        <button class="btn-secondary" id="saveMembersBtn">Save names</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Backup &amp; restore</h2></div>
+        <p class="panel-note">Everything lives in your browser only. Export a copy so you never lose it.</p>
+        <div class="settings-actions">
+          <button class="btn-secondary" id="exportBtn">Export data (.json)</button>
+          <label class="btn-secondary file-btn">
+            Import data (.json)
+            <input type="file" id="importInput" accept="application/json" hidden>
+          </label>
+        </div>
+      </div>
+
+      <div class="panel danger-panel">
+        <div class="panel-head"><h2>Reset</h2></div>
+        <p class="panel-note">Deletes all subjects, tasks and settings. This can't be undone.</p>
+        <button class="btn-danger" id="resetBtn">Reset all data</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ ADD/EDIT TASK MODAL ============ -->
+<div class="modal-overlay" id="taskModalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="taskModalTitle">Add work</h2>
+      <button class="modal-close" id="taskModalClose">✕</button>
+    </div>
+    <form id="taskForm" class="modal-body">
+      <input type="hidden" id="taskId">
+
+      <div class="form-row">
+        <label>Subject</label>
+        <select id="taskSubject" required></select>
+      </div>
+
+      <div class="form-row">
+        <label>Work type</label>
+        <select id="taskType">
+          <option>Theory</option>
+          <option>Practical</option>
+          <option>Assignment</option>
+          <option>Journal</option>
+          <option>Viva</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label>Task name</label>
+        <input type="text" id="taskName" placeholder="e.g. DBMS Unit 1 Notes" required>
+      </div>
+
+      <div class="form-row">
+        <label>Description <span class="optional">optional</span></label>
+        <textarea id="taskDescription" rows="2" placeholder="Write all questions and answers from Unit 1."></textarea>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Total work</label>
+          <input type="number" id="taskTotal" min="1" value="10" required>
+        </div>
+        <div class="form-row">
+          <label>Work unit</label>
+          <select id="taskUnit">
+            <option>Pages</option>
+            <option>Questions</option>
+            <option>Programs</option>
+            <option>Experiments</option>
+            <option>Chapters</option>
+            <option>Assignments</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Unit / topic <span class="optional">optional</span></label>
+        <input type="text" id="taskUnitTopic" placeholder="e.g. Unit 1">
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Assigned to</label>
+          <select id="taskAssigned"></select>
+        </div>
+        <div class="form-row">
+          <label>Priority</label>
+          <select id="taskPriority">
+            <option>Medium</option>
+            <option>High</option>
+            <option>Low</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Due date <span class="optional">optional</span></label>
+        <input type="date" id="taskDueDate">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="taskCancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary">Save task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ EDIT PROGRESS MODAL ============ -->
+<div class="modal-overlay" id="progressModalOverlay">
+  <div class="modal small">
+    <div class="modal-head">
+      <h2>Edit progress</h2>
+      <button class="modal-close" id="progressModalClose">✕</button>
+    </div>
+    <form id="progressForm" class="modal-body">
+      <input type="hidden" id="progressTaskId">
+      <p class="progress-modal-name" id="progressModalName"></p>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Completed</label>
+          <input type="number" id="progressCompleted" min="0" required>
+        </div>
+        <div class="form-row">
+          <label>Total</label>
+          <input type="number" id="progressTotal" min="1" required>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="progressCancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ SUBJECT MODAL ============ -->
+<div class="modal-overlay" id="subjectModalOverlay">
+  <div class="modal small">
+    <div class="modal-head">
+      <h2 id="subjectModalTitle">Add subject</h2>
+      <button class="modal-close" id="subjectModalClose">✕</button>
+    </div>
+    <form id="subjectForm" class="modal-body">
+      <input type="hidden" id="subjectId">
+      <div class="form-row">
+        <label>Subject name</label>
+        <input type="text" id="subjectName" placeholder="e.g. Operating Systems" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="subjectCancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary">Save subject</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ CONFIRM MODAL ============ -->
+<div class="modal-overlay" id="confirmModalOverlay">
+  <div class="modal small">
+    <div class="modal-head">
+      <h2 id="confirmModalTitle">Are you sure?</h2>
+    </div>
+    <div class="modal-body">
+      <p id="confirmModalMessage">This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="confirmCancelBtn">Cancel</button>
+        <button type="button" class="btn-danger" id="confirmOkBtn">Yes, continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CELEBRATION TOAST ============ -->
+<div class="celebration" id="celebration">
+  <div class="celebration-inner">
+    <span class="celebration-check">✓</span>
+    <span id="celebrationText">Task completed!</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============ AUTH OVERLAY ============ -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-brand"><span class="brand-mark">§</span> Ledger</div>
+
+    <div id="authStateSignedOut">
+      <h2>Sign in to continue</h2>
+      <p>This group's data is shared live. Sign in with Google to request access.</p>
+      <button class="btn-primary" id="googleSignInBtn">Sign in with Google</button>
+    </div>
+
+    <div id="authStatePending" style="display:none;">
+      <h2>Waiting for approval</h2>
+      <p><span id="pendingUserName"></span>, your request has been sent. The admin needs to approve you before you can use the tracker. This page will unlock automatically once approved.</p>
+      <button class="btn-secondary" id="signOutFromPendingBtn">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
